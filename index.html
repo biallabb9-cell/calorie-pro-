@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>حاسبة السعرات الحرارية</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0f0a;
+    --surface: #111811;
+    --card: #161e16;
+    --green: #4ade80;
+    --green-dim: #22c55e;
+    --green-glow: rgba(74, 222, 128, 0.15);
+    --red: #f87171;
+    --orange: #fb923c;
+    --text: #e8f5e8;
+    --muted: #6b8c6b;
+    --border: rgba(74,222,128,0.12);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Cairo', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Background grid */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: 
+      linear-gradient(rgba(74,222,128,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(74,222,128,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 40px 20px;
+  }
+
+  /* Header */
+  header {
+    text-align: center;
+    margin-bottom: 50px;
+    animation: fadeDown 0.8s ease both;
+  }
+
+  .logo {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--green-glow);
+    border: 1px solid var(--border);
+    padding: 8px 20px;
+    border-radius: 50px;
+    margin-bottom: 24px;
+    font-size: 13px;
+    color: var(--green);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  .logo-dot {
+    width: 8px;
+    height: 8px;
+    background: var(--green);
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+  }
+
+  h1 {
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    font-weight: 900;
+    line-height: 1.1;
+    background: linear-gradient(135deg, var(--green) 0%, #a3e635 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 12px;
+  }
+
+  .subtitle {
+    color: var(--muted);
+    font-size: 1rem;
+    font-weight: 300;
+  }
+
+  /* Main grid */
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    margin-bottom: 24px;
+  }
+
+  @media (max-width: 600px) {
+    .grid { grid-template-columns: 1fr; }
+  }
+
+  /* Cards */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 28px;
+    animation: fadeUp 0.8s ease both;
+  }
+
+  .card:nth-child(2) { animation-delay: 0.1s; }
+  .card.full { grid-column: 1 / -1; }
+
+  .card-title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--green);
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .card-title::before {
+    content: '';
+    width: 20px;
+    height: 2px;
+    background: var(--green);
+  }
+
+  /* Form elements */
+  .field {
+    margin-bottom: 18px;
+  }
+
+  label {
+    display: block;
+    font-size: 0.8rem;
+    color: var(--muted);
+    margin-bottom: 8px;
+    font-weight: 600;
+  }
+
+  input[type="number"], select {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    color: var(--text);
+    font-family: 'Cairo', sans-serif;
+    font-size: 1rem;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    appearance: none;
+  }
+
+  input[type="number"]:focus, select:focus {
+    border-color: var(--green);
+    box-shadow: 0 0 0 3px var(--green-glow);
+  }
+
+  /* Gender toggle */
+  .toggle-group {
+    display: flex;
+    gap: 10px;
+  }
+
+  .toggle-btn {
+    flex: 1;
+    padding: 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    color: var(--muted);
+    font-family: 'Cairo', sans-serif;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-weight: 600;
+  }
+
+  .toggle-btn.active {
+    background: var(--green-glow);
+    border-color: var(--green);
+    color: var(--green);
+  }
+
+  /* Activity slider */
+  .activity-options {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  @media (max-width: 600px) {
+    .activity-options { grid-template-columns: 1fr; }
+  }
+
+  .activity-btn {
+    padding: 10px 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--muted);
+    font-family: 'Cairo', sans-serif;
+    font-size: 0.78rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: right;
+    font-weight: 600;
+    line-height: 1.4;
+  }
+
+  .activity-btn span {
+    display: block;
+    font-size: 0.68rem;
+    opacity: 0.7;
+    font-weight: 400;
+  }
+
+  .activity-btn.active {
+    background: var(--green-glow);
+    border-color: var(--green);
+    color: var(--green);
+  }
+
+  /* Calculate button */
+  .calc-btn {
+    width: 100%;
+    padding: 18px;
+    background: linear-gradient(135deg, var(--green) 0%, #a3e635 100%);
+    border: none;
+    border-radius: 14px;
+    color: #0a0f0a;
+    font-family: 'Cairo', sans-serif;
+    font-size: 1.1rem;
+    font-weight: 900;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    letter-spacing: 1px;
+    margin-top: 8px;
+  }
+
+  .calc-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 30px rgba(74,222,128,0.3);
+  }
+
+  .calc-btn:active { transform: translateY(0); }
+
+  /* Results */
+  .results {
+    display: none;
+    animation: fadeUp 0.5s ease both;
+  }
+
+  .results.show { display: block; }
+
+  .result-hero {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 36px;
+    text-align: center;
+    margin-bottom: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .result-hero::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 300px;
+    height: 300px;
+    background: radial-gradient(circle, var(--green-glow) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .result-label {
+    font-size: 0.75rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+
+  .result-calories {
+    font-size: clamp(3rem, 8vw, 5rem);
+    font-weight: 900;
+    color: var(--green);
+    line-height: 1;
+    margin-bottom: 4px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .result-unit {
+    font-size: 1rem;
+    color: var(--muted);
+    margin-bottom: 20px;
+  }
+
+  .result-note {
+    font-size: 0.85rem;
+    color: var(--muted);
+    background: var(--surface);
+    display: inline-block;
+    padding: 8px 20px;
+    border-radius: 50px;
+    border: 1px solid var(--border);
+  }
+
+  /* Goals grid */
+  .goals-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+    margin-bottom: 20px;
+  }
+
+  @media (max-width: 500px) {
+    .goals-grid { grid-template-columns: 1fr; }
+  }
+
+  .goal-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px;
+    text-align: center;
+    transition: border-color 0.2s;
+  }
+
+  .goal-card:hover { border-color: var(--green-dim); }
+
+  .goal-icon {
+    font-size: 1.5rem;
+    margin-bottom: 8px;
+  }
+
+  .goal-name {
+    font-size: 0.75rem;
+    color: var(--muted);
+    margin-bottom: 6px;
+    font-weight: 600;
+  }
+
+  .goal-cal {
+    font-size: 1.3rem;
+    font-weight: 900;
+  }
+
+  .goal-cal.lose { color: var(--orange); }
+  .goal-cal.maintain { color: var(--green); }
+  .goal-cal.gain { color: #60a5fa; }
+
+  /* Macros */
+  .macros-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 28px;
+    margin-bottom: 20px;
+  }
+
+  .macros-title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--green);
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .macros-title::before {
+    content: '';
+    width: 20px;
+    height: 2px;
+    background: var(--green);
+  }
+
+  .macro-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+
+  .macro-info {
+    flex: 1;
+  }
+
+  .macro-name {
+    font-size: 0.85rem;
+    font-weight: 700;
+    margin-bottom: 2px;
+  }
+
+  .macro-val {
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+
+  .macro-bar-bg {
+    flex: 2;
+    height: 8px;
+    background: var(--surface);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+
+  .macro-bar {
+    height: 100%;
+    border-radius: 10px;
+    transition: width 1s cubic-bezier(0.4,0,0.2,1);
+    width: 0;
+  }
+
+  .macro-bar.protein { background: linear-gradient(90deg, #f87171, #fb923c); }
+  .macro-bar.carbs { background: linear-gradient(90deg, #60a5fa, #818cf8); }
+  .macro-bar.fat { background: linear-gradient(90deg, #facc15, #fb923c); }
+
+  /* BMI card */
+  .bmi-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 28px;
+  }
+
+  .bmi-display {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+
+  .bmi-number {
+    font-size: 3rem;
+    font-weight: 900;
+  }
+
+  .bmi-status {
+    padding: 6px 16px;
+    border-radius: 50px;
+    font-size: 0.85rem;
+    font-weight: 700;
+  }
+
+  .bmi-scale {
+    width: 100%;
+    height: 10px;
+    background: linear-gradient(90deg, #60a5fa, #4ade80, #facc15, #fb923c, #f87171);
+    border-radius: 10px;
+    margin-top: 16px;
+    position: relative;
+  }
+
+  .bmi-indicator {
+    position: absolute;
+    top: -4px;
+    width: 18px;
+    height: 18px;
+    background: white;
+    border-radius: 50%;
+    transform: translateX(-50%);
+    box-shadow: 0 0 10px rgba(255,255,255,0.5);
+    transition: left 1s cubic-bezier(0.4,0,0.2,1);
+  }
+
+  /* Animations */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes fadeDown {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.8); }
+  }
+
+  @keyframes countUp {
+    from { opacity: 0; transform: scale(0.8); }
+    to { opacity: 1; transform: scale(1); }
+  }
+
+  .count-anim {
+    animation: countUp 0.5s ease both;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div class="logo">
+      <div class="logo-dot"></div>
+      صحة ولياقة
+    </div>
+    <h1>حاسبة السعرات الحرارية</h1>
+    <p class="subtitle">احسب احتياجك اليومي من السعرات الحرارية بدقة علمية</p>
+  </header>
+
+  <!-- Form -->
+  <div class="grid">
+    <div class="card">
+      <div class="card-title">بياناتك الشخصية</div>
+
+      <div class="field">
+        <label>الجنس</label>
+        <div class="toggle-group">
+          <button class="toggle-btn active" onclick="setGender('male', this)">♂ ذكر</button>
+          <button class="toggle-btn" onclick="setGender('female', this)">♀ أنثى</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>العمر (سنة)</label>
+        <input type="number" id="age" placeholder="25" min="10" max="100">
+      </div>
+
+      <div class="field">
+        <label>الوزن (كجم)</label>
+        <input type="number" id="weight" placeholder="70" min="30" max="300">
+      </div>
+
+      <div class="field">
+        <label>الطول (سم)</label>
+        <input type="number" id="height" placeholder="170" min="100" max="250">
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">مستوى النشاط</div>
+      <div class="activity-options">
+        <button class="activity-btn" onclick="setActivity(1.2, this)">
+          🛋️ خامل
+          <span>لا تمارين / عمل مكتبي</span>
+        </button>
+        <button class="activity-btn" onclick="setActivity(1.375, this)">
+          🚶 خفيف
+          <span>1-3 أيام في الأسبوع</span>
+        </button>
+        <button class="activity-btn active" onclick="setActivity(1.55, this)">
+          🏃 متوسط
+          <span>3-5 أيام في الأسبوع</span>
+        </button>
+        <button class="activity-btn" onclick="setActivity(1.725, this)">
+          💪 نشيط
+          <span>6-7 أيام في الأسبوع</span>
+        </button>
+        <button class="activity-btn" onclick="setActivity(1.9, this)">
+          🏋️ مكثف جداً
+          <span>رياضي محترف</span>
+        </button>
+      </div>
+
+      <button class="calc-btn" onclick="calculate()">احسب الآن ⚡</button>
+    </div>
+  </div>
+
+  <!-- Results -->
+  <div class="results" id="results">
+    <div class="result-hero">
+      <div class="result-label">احتياجك اليومي للحفاظ على وزنك</div>
+      <div class="result-calories" id="mainCalories">0</div>
+      <div class="result-unit">سعرة حرارية / يوم</div>
+      <div class="result-note" id="bmrNote"></div>
+    </div>
+
+    <div class="goals-grid">
+      <div class="goal-card">
+        <div class="goal-icon">🔥</div>
+        <div class="goal-name">خسارة الوزن</div>
+        <div class="goal-cal lose" id="loseCalories">-</div>
+        <div style="font-size:0.7rem;color:var(--muted);margin-top:4px;">سعرة / يوم</div>
+      </div>
+      <div class="goal-card">
+        <div class="goal-icon">⚖️</div>
+        <div class="goal-name">الحفاظ على الوزن</div>
+        <div class="goal-cal maintain" id="maintainCalories">-</div>
+        <div style="font-size:0.7rem;color:var(--muted);margin-top:4px;">سعرة / يوم</div>
+      </div>
+      <div class="goal-card">
+        <div class="goal-icon">💪</div>
+        <div class="goal-name">زيادة الكتلة العضلية</div>
+        <div class="goal-cal gain" id="gainCalories">-</div>
+        <div style="font-size:0.7rem;color:var(--muted);margin-top:4px;">سعرة / يوم</div>
+      </div>
+    </div>
+
+    <div class="macros-card">
+      <div class="macros-title">توزيع المغذيات الكبرى</div>
+      <div class="macro-row">
+        <div class="macro-info">
+          <div class="macro-name" style="color:#fb923c;">🥩 بروتين</div>
+          <div class="macro-val" id="proteinVal">-</div>
+        </div>
+        <div class="macro-bar-bg">
+          <div class="macro-bar protein" id="proteinBar"></div>
+        </div>
+      </div>
+      <div class="macro-row">
+        <div class="macro-info">
+          <div class="macro-name" style="color:#60a5fa;">🌾 كربوهيدرات</div>
+          <div class="macro-val" id="carbsVal">-</div>
+        </div>
+        <div class="macro-bar-bg">
+          <div class="macro-bar carbs" id="carbsBar"></div>
+        </div>
+      </div>
+      <div class="macro-row">
+        <div class="macro-info">
+          <div class="macro-name" style="color:#facc15;">🥑 دهون</div>
+          <div class="macro-val" id="fatVal">-</div>
+        </div>
+        <div class="macro-bar-bg">
+          <div class="macro-bar fat" id="fatBar"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bmi-card">
+      <div class="macros-title">مؤشر كتلة الجسم (BMI)</div>
+      <div class="bmi-display">
+        <div>
+          <div style="font-size:0.8rem;color:var(--muted);margin-bottom:4px;">مؤشرك</div>
+          <div class="bmi-number" id="bmiValue">-</div>
+        </div>
+        <div class="bmi-status" id="bmiStatus"></div>
+      </div>
+      <div class="bmi-scale">
+        <div class="bmi-indicator" id="bmiIndicator" style="left:50%"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:0.65rem;color:var(--muted);">
+        <span>نحيف &lt;18.5</span>
+        <span>طبيعي 18.5-25</span>
+        <span>زائد 25-30</span>
+        <span>سمنة &gt;30</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  let gender = 'male';
+  let activityFactor = 1.55;
+
+  function setGender(g, btn) {
+    gender = g;
+    document.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  }
+
+  function setActivity(factor, btn) {
+    activityFactor = factor;
+    document.querySelectorAll('.activity-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  }
+
+  function animateNumber(el, target) {
+    const start = 0;
+    const duration = 1000;
+    const startTime = performance.now();
+    function update(now) {
+      const t = Math.min((now - startTime) / duration, 1);
+      const ease = 1 - Math.pow(1 - t, 3);
+      el.textContent = Math.round(start + (target - start) * ease).toLocaleString('ar');
+      if (t < 1) requestAnimationFrame(update);
+    }
+    requestAnimationFrame(update);
+  }
+
+  function calculate() {
+    const age = parseFloat(document.getElementById('age').value);
+    const weight = parseFloat(document.getElementById('weight').value);
+    const height = parseFloat(document.getElementById('height').value);
+
+    if (!age || !weight || !height) {
+      alert('⚠️ يرجى ملء جميع الحقول');
+      return;
+    }
+
+    // Mifflin-St Jeor
+    let bmr;
+    if (gender === 'male') {
+      bmr = 10 * weight + 6.25 * height - 5 * age + 5;
+    } else {
+      bmr = 10 * weight + 6.25 * height - 5 * age - 161;
+    }
+
+    const tdee = Math.round(bmr * activityFactor);
+    const lose = Math.round(tdee - 500);
+    const gain = Math.round(tdee + 300);
+
+    // Macros (maintain)
+    const protein = Math.round(weight * 2);
+    const fat = Math.round((tdee * 0.25) / 9);
+    const carbs = Math.round((tdee - protein * 4 - fat * 9) / 4);
+
+    // BMI
+    const heightM = height / 100;
+    const bmi = (weight / (heightM * heightM)).toFixed(1);
+
+    // Show results
+    const resultsEl = document.getElementById('results');
+    resultsEl.classList.add('show');
+    resultsEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    // Animate main calories
+    const mainEl = document.getElementById('mainCalories');
+    mainEl.classList.remove('count-anim');
+    void mainEl.offsetWidth;
+    mainEl.classList.add('count-anim');
+    animateNumber(mainEl, tdee);
+
+    document.getElementById('bmrNote').textContent = `معدل الأيض الأساسي (BMR): ${Math.round(bmr).toLocaleString('ar')} سعرة`;
+    document.getElementById('loseCalories').textContent = lose.toLocaleString('ar');
+    document.getElementById('maintainCalories').textContent = tdee.toLocaleString('ar');
+    document.getElementById('gainCalories').textContent = gain.toLocaleString('ar');
+
+    // Macros
+    document.getElementById('proteinVal').textContent = `${protein}جم · ${protein*4} سعرة`;
+    document.getElementById('carbsVal').textContent = `${carbs}جم · ${carbs*4} سعرة`;
+    document.getElementById('fatVal').textContent = `${fat}جم · ${fat*9} سعرة`;
+
+    setTimeout(() => {
+      document.getElementById('proteinBar').style.width = '30%';
+      document.getElementById('carbsBar').style.width = '45%';
+      document.getElementById('fatBar').style.width = '25%';
+    }, 200);
+
+    // BMI
+    document.getElementById('bmiValue').textContent = bmi;
+    let bmiLabel, bmiColor;
+    if (bmi < 18.5) { bmiLabel = 'نقص الوزن'; bmiColor = '#60a5fa'; }
+    else if (bmi < 25) { bmiLabel = 'طبيعي ✓'; bmiColor = '#4ade80'; }
+    else if (bmi < 30) { bmiLabel = 'زيادة الوزن'; bmiColor = '#facc15'; }
+    else { bmiLabel = 'سمنة'; bmiColor = '#f87171'; }
+
+    const statusEl = document.getElementById('bmiStatus');
+    statusEl.textContent = bmiLabel;
+    statusEl.style.background = bmiColor + '22';
+    statusEl.style.color = bmiColor;
+    statusEl.style.border = `1px solid ${bmiColor}44`;
+
+    // BMI indicator position (scale 10-40)
+    const bmiPos = Math.min(Math.max((bmi - 10) / 30 * 100, 2), 98);
+    setTimeout(() => {
+      document.getElementById('bmiIndicator').style.left = bmiPos + '%';
+    }, 300);
+  }
+</script>
+</body>
+</html>
